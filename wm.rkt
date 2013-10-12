@@ -35,20 +35,39 @@
                       screen-dimensions main-scr) 'w)
                     default-width))
 
+(define (set-dims win w h)
+  (set-size
+   win (make-hash
+        (list
+         (cons 'w w)
+         (cons 'h h)))))
+
+(define (set-pos win x y)
+  (set-top-left
+   win (make-hash
+        (list
+         (cons 'x x)
+         (cons 'y y)))))
+
+(define (set-pos-dim win x y w h)
+  (set-frame
+   win (make-hash (list (cons 'x x)
+                        (cons 'y y)
+                        (cons 'w w)
+                        (cons 'h h)))))
+
 ;; Single screen layout:
 ;; One main panel - like XMonad.
 ;; A Side pane that contains the remaining windows
 (define (onescr/scale-main-window)
-  (set-frame
+  (set-pos-dim
    (focused-window)
-   (make-hash
-    (list
-     (cons 'x 0)
-     (cons 'y 0)
-     (cons 'w default-width)
-     (cons 'h (hash-ref
-               (hash-ref
-                screen-dimensions main-scr) 'h))))))
+   0
+   0
+   default-width
+   (hash-ref
+    (hash-ref
+     screen-dimensions main-scr) 'h)))
 
 (define (onescr/scale-non-focused-windows)
   (let* ((main-win  (focused-window))
@@ -56,59 +75,48 @@
          (rem-wins  (filter
                      (lambda (x)
                        (not (=  x main-win)))
-                     (visible-windows)))
-         (rem-wins1 (take
-                     rem-wins
-                     (-
-                      (length rem-wins) 1)))
-         (last-rem  (last rem-wins))
-         (y-values  (y-grid
-                     (hash-ref
-                      (hash-ref
-                       screen-dimensions main-scr) 'h)
-                     (length rem-wins1)))
-         (x-values  (map
-                     (lambda (_) default-width)
-                     rem-wins1)))
-    (map
-     (lambda (win-x-y)
-       (let ((win (first win-x-y))
-             (x-y (second win-x-y)))
-         (focus-window win)
-         (set-top-left win x-y)
-         (set-size
-          win (make-hash
-               (list
-                (cons 'w scum-width)
-                (cons 'h (max
-                          (quotient
-                           (hash-ref
-                            (hash-ref
-                             screen-dimensions
-                             main-scr)
-                            'h)
-                           (length rem-wins1))
-                          0)))))))
-     (map
-      list
-      rem-wins1
-      (map
-       (lambda (x-y)
-         (let ((x (first x-y))
-               (y (second x-y)))
-           (make-hash
-            (list
-             (cons 'x x)
-             (cons 'y y)))))
-       (map list x-values y-values))))
+                     (all-windows)))
 
+         (stk-wins  (rest rem-wins))
+
+         (tos-win   (first rem-wins))
+
+         (positions (stacked-pos rem-wins)))
+    
+    (stack stk-wins (drop-last positions))
+    (place-at-bottom tos-win (last positions))
+    (focus-window tos-win)
     (focus-window main-win)))
 
-;; provides coords to stack windows
-;; along the vertical axis
-(define (y-grid y-len num-windows)
-  (for/list [(i (range num-windows))]
-    (* i 30)))
+(define (drop-last lst)
+  (take lst (- (length lst) 1)))
+
+(define (stacked-pos wins)
+  (map
+   (lambda (i)
+     (list default-width (* i 30)))
+   (range (length wins))))
+
+(define (stack wins positions)
+  (map
+   (lambda (win-x-y)
+     (let ((win (first win-x-y))
+           (x   (first (second win-x-y)))
+           (y   (second (second win-x-y))))
+       (set-pos-dim win x y scum-width 500)))
+   (map
+    list wins positions))
+  (map focus-window wins))
+
+(define (place-at-bottom win pos)
+  (let* ((x (first pos))
+         (y (second pos))
+         (w scum-width)
+         (h (- (hash-ref
+                (hash-ref
+                 screen-dimensions main-scr) 'h)
+               y)))
+    (set-pos-dim win x y w h)))
 
 (define (onescr/scale-windows)
   (onescr/scale-main-window)
