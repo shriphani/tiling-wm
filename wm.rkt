@@ -51,29 +51,47 @@
                 screen-dimensions main-scr) 'h))))))
 
 (define (onescr/scale-non-focused-windows)
-  (let* ((main-win (focused-window))
+  (let* ((main-win  (focused-window))
          
-         (rem-wins (filter
-                    (lambda (x)
-                      (not (=  x main-win)))
-                    (visible-windows)))
-         (y-values (y-grid
-                    (hash-ref
+         (rem-wins  (filter
+                     (lambda (x)
+                       (not (=  x main-win)))
+                     (visible-windows)))
+         (rem-wins1 (take
+                     rem-wins
+                     (-
+                      (length rem-wins) 1)))
+         (last-rem  (last rem-wins))
+         (y-values  (y-grid
                      (hash-ref
-                      screen-dimensions main-scr) 'h)
-                    (length rem-wins)))
-         
-         (x-values (map
-                    (lambda (_) default-width) rem-wins)))
+                      (hash-ref
+                       screen-dimensions main-scr) 'h)
+                     (length rem-wins1)))
+         (x-values  (map
+                     (lambda (_) default-width)
+                     rem-wins1)))
     (map
      (lambda (win-x-y)
        (let ((win (first win-x-y))
              (x-y (second win-x-y)))
          (focus-window win)
-         (set-top-left win x-y)))
+         (set-top-left win x-y)
+         (set-size
+          win (make-hash
+               (list
+                (cons 'w scum-width)
+                (cons 'h (max
+                          (quotient
+                           (hash-ref
+                            (hash-ref
+                             screen-dimensions
+                             main-scr)
+                            'h)
+                           (length rem-wins1))
+                          0)))))))
      (map
       list
-      rem-wins
+      rem-wins1
       (map
        (lambda (x-y)
          (let ((x (first x-y))
@@ -90,7 +108,7 @@
 ;; along the vertical axis
 (define (y-grid y-len num-windows)
   (for/list [(i (range num-windows))]
-    (* i 20)))
+    (* i 30)))
 
 (define (onescr/scale-windows)
   (onescr/scale-main-window)
