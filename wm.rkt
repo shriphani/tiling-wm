@@ -8,4 +8,6 @@
 ;;;; A Tiling Window Manager for OS X
 
 (require
- (file "/Applications/Zephyros.app/Contents/Resources/libs/zephyros.rkt"))
+ (file
+  "/Applications/Zephyros.app/Contents/Resources/libs/zephyros.rkt"))
+
